@@ -32,14 +32,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            BadRequestException.class,
-            InvalidFileTypeException.class,
-            HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class
+        BadRequestException.class,
+        InvalidFileTypeException.class,
+        HttpMessageNotReadableException.class,
+        MethodArgumentTypeMismatchException.class
     })
     public ResponseEntity<ApiErrorResponse> handleBadRequest(
-            final Exception exception,
-            final HttpServletRequest request
+        final Exception exception,
+        final HttpServletRequest request
     ) {
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
@@ -90,7 +90,6 @@ public class GlobalExceptionHandler {
             final HttpServletRequest request
     ) {
         List<String> details = new ArrayList<>();
-
         for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
             details.add(fieldError.getField() + ": " + fieldError.getDefaultMessage());
         }

@@ -33,18 +33,14 @@ public class BookService {
 
     public BookResponseDto getPublicBookById(final Long bookId) {
         Book book = getBookEntityById(bookId);
-
         if (book.getStatus() != ListingStatus.AVAILABLE) {
-            // Hide non-public listings for anonymous/public access
             throw new ResourceNotFoundException("Book listing not found with id: " + bookId);
         }
-
         return toBookResponseDto(book);
     }
 
     public List<BookResponseDto> getBooksOfUser(final User currentUser) {
         requireAuthenticatedUser(currentUser);
-
         return bookRepository.findAllByOwnerIdOrderByCreatedAtDesc(currentUser.getId())
                 .stream()
                 .map(this::toBookResponseDto)
@@ -53,7 +49,6 @@ public class BookService {
 
     public List<BookResponseDto> getAllBooksForAdmin(final User currentUser) {
         requireAdmin(currentUser);
-
         return bookRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(this::toBookResponseDto)
@@ -66,12 +61,10 @@ public class BookService {
             final User currentUser
     ) {
         requireAuthenticatedUser(currentUser);
-
         Book book = new Book();
         applyCreateFields(book, request);
         book.setOwner(currentUser);
-        book.setStatus(ListingStatus.AVAILABLE); // default public listing state
-
+        book.setStatus(ListingStatus.AVAILABLE);
         Book saved = bookRepository.save(book);
         return toBookResponseDto(saved);
     }
@@ -83,12 +76,9 @@ public class BookService {
             final User currentUser
     ) {
         requireAuthenticatedUser(currentUser);
-
         Book book = getBookEntityById(bookId);
         requireOwnerOrAdmin(book, currentUser);
-
         applyUpdateFields(book, request);
-
         Book saved = bookRepository.save(book);
         return toBookResponseDto(saved);
     }
@@ -96,16 +86,15 @@ public class BookService {
     @Transactional
     public void deleteBook(final Long bookId, final User currentUser) {
         requireAuthenticatedUser(currentUser);
-
         Book book = getBookEntityById(bookId);
         requireOwnerOrAdmin(book, currentUser);
-
         bookRepository.delete(book);
     }
 
     public Book getBookEntityById(final Long bookId) {
         return bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book listing not found with id: " + bookId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Book listing not found with id: " + bookId));
     }
 
     @Transactional
@@ -117,7 +106,6 @@ public class BookService {
             final User currentUser
     ) {
         requireAuthenticatedUser(currentUser);
-
         Book book = getBookEntityById(bookId);
         requireOwnerOrAdmin(book, currentUser);
 
@@ -134,7 +122,6 @@ public class BookService {
         book.setImageUrl(imageUrl.trim());
         book.setImageObjectKey(imageObjectKey.trim());
         book.setImageContentType(imageContentType.trim());
-
         Book saved = bookRepository.save(book);
         return toBookResponseDto(saved);
     }
@@ -145,14 +132,12 @@ public class BookService {
             final User currentUser
     ) {
         requireAuthenticatedUser(currentUser);
-
         Book book = getBookEntityById(bookId);
         requireOwnerOrAdmin(book, currentUser);
 
         book.setImageUrl(null);
         book.setImageObjectKey(null);
         book.setImageContentType(null);
-
         Book saved = bookRepository.save(book);
         return toBookResponseDto(saved);
     }
@@ -204,13 +189,12 @@ public class BookService {
         if (isOwner || isAdmin(currentUser)) {
             return;
         }
-
-        throw new ForbiddenOperationException("You are not allowed to modify this book listing");
+        throw new ForbiddenOperationException(
+                "You are not allowed to modify this book listing");
     }
 
     private void requireAdmin(final User currentUser) {
         requireAuthenticatedUser(currentUser);
-
         if (!isAdmin(currentUser)) {
             throw new ForbiddenOperationException("Admin privileges required");
         }
@@ -224,17 +208,14 @@ public class BookService {
 
     private BookResponseDto toBookResponseDto(final Book book) {
         BookResponseDto dto = new BookResponseDto();
-
         dto.setId(book.getId());
         dto.setTitle(book.getTitle());
         dto.setAuthorName(book.getAuthorName());
         dto.setDescription(book.getDescription());
         dto.setLanguage(book.getLanguage());
-
         dto.setCondition(book.getCondition());
         dto.setExchangeType(book.getExchangeType());
         dto.setStatus(book.getStatus());
-
         dto.setImageUrl(book.getImageUrl());
         dto.setImageContentType(book.getImageContentType());
 
@@ -242,10 +223,8 @@ public class BookService {
             dto.setOwnerId(book.getOwner().getId());
             dto.setOwnerUsername(book.getOwner().getUsername());
         }
-
         dto.setCreatedAt(book.getCreatedAt());
         dto.setUpdatedAt(book.getUpdatedAt());
-
         return dto;
     }
 }

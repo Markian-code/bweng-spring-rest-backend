@@ -37,51 +37,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final HttpServletResponse response,
             final FilterChain filterChain
     ) throws ServletException, IOException {
-
         String token = extractJwtFromRequest(request);
 
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 Long userId = jwtService.extractUserId(token);
-
                 if (userId != null) {
                     UserDetails userDetails = customUserDetailsService.loadUserById(userId);
-
                     if (userDetails instanceof CustomUserDetails customUserDetails
                             && jwtService.isTokenValidForUser(token, customUserDetails)
                             && customUserDetails.isEnabled()) {
 
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(
-                                        userDetails,
-                                        null,
-                                        userDetails.getAuthorities()
-                                );
-
+                                        userDetails, null, userDetails.getAuthorities());
                         authentication.setDetails(
-                                new WebAuthenticationDetailsSource().buildDetails(request)
-                        );
-
+                                new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 }
-            } catch (JwtException | IllegalArgumentException exception) {
+            } catch (JwtException | IllegalArgumentException ex) {
                 SecurityContextHolder.clearContext();
-                // Invalid token - continue without authentication.
-                // Protected endpoints will be handled by JwtAuthEntryPoint (401).
             }
         }
-
         filterChain.doFilter(request, response);
     }
 
     private String extractJwtFromRequest(final HttpServletRequest request) {
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
-
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith(BEARER_PREFIX)) {
             return null;
         }
-
         String token = authHeader.substring(BEARER_PREFIX.length());
         return StringUtils.hasText(token) ? token : null;
     }

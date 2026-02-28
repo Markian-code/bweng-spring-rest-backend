@@ -46,36 +46,24 @@ public class FileStorageService {
 
     public StoredFileResult uploadBookImage(final MultipartFile file) {
         validateImageFile(file);
-
         String contentType = file.getContentType();
         String extension = CONTENT_TYPE_TO_EXTENSION.get(contentType);
         String objectKey = "books/" + UUID.randomUUID() + "." + extension;
 
         try {
             ensureBucketExists();
-
             try (InputStream inputStream = file.getInputStream()) {
-                minioClient.putObject(
-                        PutObjectArgs.builder()
-                                .bucket(bucketName)
-                                .object(objectKey)
-                                .stream(inputStream, file.getSize(), -1)
-                                .contentType(contentType)
-                                .build()
-                );
+                minioClient.putObject(PutObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(objectKey)
+                        .stream(inputStream, file.getSize(), -1)
+                        .contentType(contentType)
+                        .build());
             }
-
             String imageUrl = buildObjectUrl(objectKey);
-
-            return new StoredFileResult(
-                    objectKey,
-                    imageUrl,
-                    contentType,
-                    file.getSize()
-            );
-
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to upload file to object storage", exception);
+            return new StoredFileResult(objectKey, imageUrl, contentType, file.getSize());
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to upload file to object storage", ex);
         }
     }
 
@@ -83,17 +71,13 @@ public class FileStorageService {
         if (objectKey == null || objectKey.isBlank()) {
             return;
         }
-
         try {
-            minioClient.removeObject(
-                    RemoveObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(objectKey)
-                            .build()
-            );
-        } catch (Exception exception) {
-            // Intentionally ignored for cleanup scenarios (replacement/delete).
-            // You can log this later if you add logging.
+            minioClient.removeObject(RemoveObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectKey)
+                    .build());
+        } catch (Exception ex) {
+            // Intentionally ignored for cleanup
         }
     }
 
@@ -101,16 +85,13 @@ public class FileStorageService {
         if (objectKey == null || objectKey.isBlank()) {
             throw new BadRequestException("Object key is required");
         }
-
         try {
-            minioClient.removeObject(
-                    RemoveObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(objectKey)
-                            .build()
-            );
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to delete file from object storage", exception);
+            minioClient.removeObject(RemoveObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectKey)
+                    .build());
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to delete file from object storage", ex);
         }
     }
 
@@ -118,37 +99,26 @@ public class FileStorageService {
         if (file == null) {
             throw new BadRequestException("File is required");
         }
-
         if (file.isEmpty()) {
             throw new BadRequestException("Uploaded file must not be empty");
         }
-
         String contentType = file.getContentType();
-
         if (contentType == null || contentType.isBlank()) {
             throw new InvalidFileTypeException("Uploaded file must have a valid content type");
         }
-
         if (!ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
-            throw new InvalidFileTypeException(
-                    "Only JPG, PNG and WEBP images are allowed"
-            );
+            throw new InvalidFileTypeException("Only JPG, PNG and WEBP images are allowed");
         }
     }
 
     private void ensureBucketExists() throws Exception {
-        boolean exists = minioClient.bucketExists(
-                BucketExistsArgs.builder()
-                        .bucket(bucketName)
-                        .build()
-        );
-
+        boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
+                .bucket(bucketName)
+                .build());
         if (!exists) {
-            minioClient.makeBucket(
-                    MakeBucketArgs.builder()
-                            .bucket(bucketName)
-                            .build()
-            );
+            minioClient.makeBucket(MakeBucketArgs.builder()
+                    .bucket(bucketName)
+                    .build());
         }
     }
 
@@ -156,7 +126,6 @@ public class FileStorageService {
         String normalizedBase = minioUrl.endsWith("/")
                 ? minioUrl.substring(0, minioUrl.length() - 1)
                 : minioUrl;
-
         return normalizedBase + "/" + bucketName + "/" + objectKey;
     }
 

@@ -46,8 +46,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+        http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -55,7 +54,6 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthEntryPoint))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
-                        // Swagger / OpenAPI
                         .requestMatchers(HttpMethod.GET, "/books/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/comments/me").authenticated()
                         .requestMatchers(
@@ -67,23 +65,13 @@ public class SecurityConfig {
                                 "/api/swagger-config",
                                 "/api.yaml"
                         ).permitAll()
-
-                        // Auth endpoints
                         .requestMatchers("/auth/**").permitAll()
-
-                        // Public data access (anonymous users can view data)
                         .requestMatchers(HttpMethod.GET, "/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/comments/**").permitAll()
-
-                        // Admin area
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-
-                        // Everything else requires login
-                        .anyRequest().authenticated()
-                );
+                        .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
@@ -120,16 +108,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
         configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH",
+                "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(false);
         configuration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
         return source;
     }
 }

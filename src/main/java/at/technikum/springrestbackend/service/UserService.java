@@ -8,9 +8,10 @@ import at.technikum.springrestbackend.exception.BadRequestException;
 import at.technikum.springrestbackend.exception.ForbiddenOperationException;
 import at.technikum.springrestbackend.exception.ResourceNotFoundException;
 import at.technikum.springrestbackend.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -24,7 +25,8 @@ public class UserService {
 
     public User getUserEntityById(final Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + userId));
     }
 
     public UserResponseDto getCurrentUserProfile(final User currentUser) {
@@ -41,13 +43,10 @@ public class UserService {
 
         if (request.getUsername() != null && !request.getUsername().isBlank()) {
             String newUsername = request.getUsername().trim();
-
-            // Only check uniqueness if username is actually changing
             if (!newUsername.equalsIgnoreCase(user.getUsername())
                     && userRepository.existsByUsername(newUsername)) {
                 throw new BadRequestException("Username already taken");
             }
-
             user.setUsername(newUsername);
         }
 
@@ -66,7 +65,6 @@ public class UserService {
 
     public List<UserResponseDto> getAllUsersForAdmin(final User currentUser) {
         requireAdmin(currentUser);
-
         return userRepository.findAll()
                 .stream()
                 .map(this::toUserResponseDto)
@@ -75,7 +73,6 @@ public class UserService {
 
     public UserResponseDto getUserByIdForAdmin(final Long userId, final User currentUser) {
         requireAdmin(currentUser);
-
         User user = getUserEntityById(userId);
         return toUserResponseDto(user);
     }
@@ -87,10 +84,8 @@ public class UserService {
             final User currentUser
     ) {
         requireAdmin(currentUser);
-
         User user = getUserEntityById(userId);
         user.setEnabled(enabled);
-
         User saved = userRepository.save(user);
         return toUserResponseDto(saved);
     }
@@ -98,27 +93,20 @@ public class UserService {
     @Transactional
     public UserResponseDto toggleUserEnabled(final Long userId, final User currentUser) {
         requireAdmin(currentUser);
-
         User user = getUserEntityById(userId);
         user.setEnabled(!user.isEnabled());
-
         User saved = userRepository.save(user);
         return toUserResponseDto(saved);
     }
 
     private void requireAdmin(final User currentUser) {
-        if (currentUser == null) {
-            throw new ForbiddenOperationException("Admin privileges required");
-        }
-
-        if (currentUser.getRole() != Role.ADMIN) {
+        if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenOperationException("Admin privileges required");
         }
     }
 
     private UserResponseDto toUserResponseDto(final User user) {
         UserResponseDto dto = new UserResponseDto();
-
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setUsername(user.getUsername());
@@ -126,10 +114,8 @@ public class UserService {
         dto.setProfilePictureUrl(user.getProfilePictureUrl());
         dto.setRole(user.getRole());
         dto.setEnabled(user.isEnabled());
-
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
-
         return dto;
     }
 }

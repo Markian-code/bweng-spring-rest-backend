@@ -45,7 +45,9 @@ public class BookController {
     }
 
     @GetMapping("/{bookId}")
-    public ResponseEntity<BookResponseDto> getPublicBookById(@PathVariable final Long bookId) {
+    public ResponseEntity<BookResponseDto> getPublicBookById(
+            @PathVariable final Long bookId
+    ) {
         BookResponseDto response = bookService.getPublicBookById(bookId);
         return ResponseEntity.ok(response);
     }
@@ -87,15 +89,9 @@ public class BookController {
             @AuthenticationPrincipal final CustomUserDetails principal
     ) {
         User currentUser = resolveCurrentUser(principal);
-
-        // Capture image key before the row is gone — it is unrecoverable after deletion
         String imageObjectKey = bookService.getBookEntityById(bookId).getImageObjectKey();
-
         bookService.deleteBook(bookId, currentUser);
-
-        // Clean up MinIO object after the DB row is confirmed deleted
         fileStorageService.deleteObjectQuietly(imageObjectKey);
-
         return ResponseEntity.noContent().build();
     }
 
@@ -106,41 +102,24 @@ public class BookController {
             @AuthenticationPrincipal final CustomUserDetails principal
     ) {
         User currentUser = resolveCurrentUser(principal);
-
-        // Authorization check BEFORE any MinIO I/O — throws 403 if not owner/admin
         bookService.verifyBookOwnerOrAdmin(bookId, currentUser);
-
-        // Read old image metadata for cleanup after successful replacement
         Book existingBook = bookService.getBookEntityById(bookId);
         String oldObjectKey = existingBook.getImageObjectKey();
-
         FileStorageService.StoredFileResult storedFile = null;
 
         try {
-            // 1) Upload new file to MinIO (side effect)
             storedFile = fileStorageService.uploadBookImage(file);
-
-            // 2) Persist metadata in DB
             BookResponseDto response = bookService.updateBookImageMetadata(
-                    bookId,
-                    storedFile.fileUrl(),
-                    storedFile.objectKey(),
-                    storedFile.contentType(),
-                    currentUser
-            );
+                    bookId, storedFile.fileUrl(), storedFile.objectKey(),
+                    storedFile.contentType(), currentUser);
 
-            // 3) Cleanup old file AFTER successful DB update
-            if (oldObjectKey != null
-                    && !oldObjectKey.isBlank()
+            if (oldObjectKey != null && !oldObjectKey.isBlank()
                     && !oldObjectKey.equals(storedFile.objectKey())) {
                 fileStorageService.deleteObjectQuietly(oldObjectKey);
             }
-
             return ResponseEntity.ok(response);
         } catch (RuntimeException ex) {
-            // If DB update fails after upload, remove the newly uploaded object (avoid orphan files)
-            if (storedFile != null
-                    && storedFile.objectKey() != null
+            if (storedFile != null && storedFile.objectKey() != null
                     && !storedFile.objectKey().isBlank()) {
                 fileStorageService.deleteObjectQuietly(storedFile.objectKey());
             }
@@ -154,16 +133,13 @@ public class BookController {
             @AuthenticationPrincipal final CustomUserDetails principal
     ) {
         User currentUser = resolveCurrentUser(principal);
-
         Book existingBook = bookService.getBookEntityById(bookId);
         String oldObjectKey = existingBook.getImageObjectKey();
 
         BookResponseDto response = bookService.clearBookImageMetadata(bookId, currentUser);
-
         if (oldObjectKey != null && !oldObjectKey.isBlank()) {
             fileStorageService.deleteObjectQuietly(oldObjectKey);
         }
-
         return ResponseEntity.ok(response);
     }
 
@@ -171,7 +147,6 @@ public class BookController {
         if (principal == null || principal.getId() == null) {
             throw new BadRequestException("Authenticated user is required");
         }
-
         return userService.getUserEntityById(principal.getId());
     }
 }
