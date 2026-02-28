@@ -100,7 +100,29 @@ class GlobalExceptionHandlerTest {
         }
     }
 
-    //  handleForbiddenOperation  →  403
+     //  handleConflict  →  409
+
+    @Nested
+    @DisplayName("handleConflict → 409 Conflict")
+    class HandleConflict {
+
+        @Test
+        @DisplayName("returns 409 with the exception message")
+        void returns409WithMessage() {
+            HttpServletRequest req = mockRequest("/api/auth/register");
+            ConflictException ex = new ConflictException("Email is already in use");
+
+            ResponseEntity<ApiErrorResponse> response = handler.handleConflict(ex, req);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody().getStatus()).isEqualTo(409);
+            assertThat(response.getBody().getError()).isEqualTo("Conflict");
+            assertThat(response.getBody().getMessage()).isEqualTo("Email is already in use");
+            assertThat(response.getBody().getPath()).isEqualTo("/api/auth/register");
+        }
+    }
+
+   //  handleForbiddenOperation  →  403
 
     @Nested
     @DisplayName("handleForbiddenOperation → 403 Forbidden")

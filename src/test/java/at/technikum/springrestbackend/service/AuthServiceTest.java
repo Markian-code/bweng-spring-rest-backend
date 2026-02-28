@@ -6,6 +6,7 @@ import at.technikum.springrestbackend.dto.RegisterRequestDto;
 import at.technikum.springrestbackend.entity.Role;
 import at.technikum.springrestbackend.entity.User;
 import at.technikum.springrestbackend.exception.BadRequestException;
+import at.technikum.springrestbackend.exception.ConflictException;
 import at.technikum.springrestbackend.exception.ForbiddenOperationException;
 import at.technikum.springrestbackend.repository.UserRepository;
 import at.technikum.springrestbackend.security.CustomUserDetails;
@@ -226,12 +227,12 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("throws BadRequestException when email is already in use")
+        @DisplayName("throws ConflictException when email is already in use")
         void throwsWhenEmailTaken() {
             when(userRepository.existsByEmail("alice@example.com")).thenReturn(true);
 
             assertThatThrownBy(() -> authService.register(validRegisterRequest()))
-                    .isInstanceOf(BadRequestException.class)
+                    .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("Email");
             verify(userRepository, never()).save(any());
         }
@@ -258,13 +259,13 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("throws BadRequestException when username is already in use")
+        @DisplayName("throws ConflictException when username is already in use")
         void throwsWhenUsernameTaken() {
             when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
             when(userRepository.existsByUsername("alice99")).thenReturn(true);
 
             assertThatThrownBy(() -> authService.register(validRegisterRequest()))
-                    .isInstanceOf(BadRequestException.class)
+                    .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("Username");
             verify(userRepository, never()).save(any());
         }

@@ -6,6 +6,7 @@ import at.technikum.springrestbackend.dto.RegisterRequestDto;
 import at.technikum.springrestbackend.entity.Role;
 import at.technikum.springrestbackend.entity.User;
 import at.technikum.springrestbackend.exception.BadRequestException;
+import at.technikum.springrestbackend.exception.ConflictException;
 import at.technikum.springrestbackend.exception.ForbiddenOperationException;
 import at.technikum.springrestbackend.repository.UserRepository;
 import at.technikum.springrestbackend.security.CustomUserDetails;
@@ -53,10 +54,10 @@ public class AuthService {
         String normalizedCountryCode = normalizeCountryCode(dto.getCountryCode());
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new BadRequestException("Email is already in use");
+            throw new ConflictException("Email is already in use");
         }
         if (userRepository.existsByUsername(normalizedUsername)) {
-            throw new BadRequestException("Username is already in use");
+            throw new ConflictException("Username is already in use");
         }
 
         User user = new User();

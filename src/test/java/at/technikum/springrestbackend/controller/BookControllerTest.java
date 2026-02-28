@@ -21,8 +21,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -125,15 +131,18 @@ class BookControllerTest {
     class GetLatestPublicBooks {
 
         @Test
-        @DisplayName("returns 200 with list of public books")
+        @DisplayName("returns 200 with page of public books")
         void returns200WithPublicBooks() {
             BookResponseDto dto = new BookResponseDto();
-            when(bookService.getLatestPublicBooks()).thenReturn(List.of(dto));
+            Page<BookResponseDto> page = new PageImpl<>(List.of(dto));
+            when(bookService.getLatestPublicBooks(any(), any(), any(), any(), any()))
+                    .thenReturn(page);
 
-            ResponseEntity<List<BookResponseDto>> result = controller.getLatestPublicBooks();
+            ResponseEntity<Page<BookResponseDto>> result =
+                    controller.getLatestPublicBooks(null, null, null, null, Pageable.unpaged());
 
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(result.getBody()).containsExactly(dto);
+            assertThat(result.getBody().getContent()).containsExactly(dto);
         }
     }
 
@@ -186,20 +195,31 @@ class BookControllerTest {
     class CreateBook {
 
         @Test
-        @DisplayName("returns 201 with the created book")
+        @DisplayName("returns 201 with the created book and Location header")
         void returns201WithCreatedBook() {
             CustomUserDetails principal = buildPrincipal(1L, Role.USER);
             User userEntity = buildUser(1L, Role.USER);
             BookCreateRequestDto request = new BookCreateRequestDto();
             BookResponseDto response = new BookResponseDto();
+            response.setId(42L);
 
             when(userService.getUserEntityById(1L)).thenReturn(userEntity);
             when(bookService.createBook(request, userEntity)).thenReturn(response);
 
-            ResponseEntity<BookResponseDto> result = controller.createBook(request, principal);
+            MockHttpServletRequest mockServletRequest = new MockHttpServletRequest();
+            mockServletRequest.setRequestURI("/books");
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(mockServletRequest));
+            try {
+                ResponseEntity<BookResponseDto> result = controller.createBook(request, principal);
 
-            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-            assertThat(result.getBody()).isSameAs(response);
+                assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+                assertThat(result.getBody()).isSameAs(response);
+                assertThat(result.getHeaders().getLocation()).isNotNull();
+                assertThat(result.getHeaders().getLocation().toString()).endsWith("/42");
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
         }
     }
 

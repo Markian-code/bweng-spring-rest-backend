@@ -4,6 +4,8 @@ import at.technikum.springrestbackend.dto.BookCreateRequestDto;
 import at.technikum.springrestbackend.dto.BookResponseDto;
 import at.technikum.springrestbackend.dto.BookUpdateRequestDto;
 import at.technikum.springrestbackend.entity.Book;
+import at.technikum.springrestbackend.entity.BookCondition;
+import at.technikum.springrestbackend.entity.ExchangeType;
 import at.technikum.springrestbackend.entity.User;
 import at.technikum.springrestbackend.exception.BadRequestException;
 import at.technikum.springrestbackend.security.CustomUserDetails;
@@ -11,14 +13,17 @@ import at.technikum.springrestbackend.service.BookService;
 import at.technikum.springrestbackend.service.FileStorageService;
 import at.technikum.springrestbackend.service.UserService;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.util.List;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/books")
@@ -39,8 +44,15 @@ public class BookController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BookResponseDto>> getLatestPublicBooks() {
-        List<BookResponseDto> response = bookService.getLatestPublicBooks();
+    public ResponseEntity<Page<BookResponseDto>> getLatestPublicBooks(
+            @RequestParam(required = false) final BookCondition condition,
+            @RequestParam(required = false) final ExchangeType exchangeType,
+            @RequestParam(required = false) final String language,
+            @RequestParam(required = false) final String search,
+            final Pageable pageable
+    ) {
+        Page<BookResponseDto> response = bookService.getLatestPublicBooks(
+                pageable, condition, exchangeType, language, search);
         return ResponseEntity.ok(response);
     }
 
@@ -69,7 +81,11 @@ public class BookController {
     ) {
         User currentUser = resolveCurrentUser(principal);
         BookResponseDto response = bookService.createBook(request, currentUser);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(response);
     }
 
     @PutMapping("/{bookId}")

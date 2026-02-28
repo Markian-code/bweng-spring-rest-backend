@@ -23,6 +23,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -103,25 +107,27 @@ class BookServiceTest {
                     buildBook(2L, owner, ListingStatus.AVAILABLE),
                     buildBook(1L, owner, ListingStatus.AVAILABLE)
             );
-            when(bookRepository.findAllByStatusOrderByCreatedAtDesc(ListingStatus.AVAILABLE))
-                    .thenReturn(books);
+            when(bookRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(books));
 
-            List<BookResponseDto> result = bookService.getLatestPublicBooks();
+            Page<BookResponseDto> result = bookService.getLatestPublicBooks(
+                    Pageable.unpaged(), null, null, null, null);
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).getId()).isEqualTo(2L);
-            assertThat(result.get(1).getId()).isEqualTo(1L);
-            assertThat(result.get(0).getOwnerId()).isEqualTo(owner.getId());
-            assertThat(result.get(0).getOwnerUsername()).isEqualTo(owner.getUsername());
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getContent().get(0).getId()).isEqualTo(2L);
+            assertThat(result.getContent().get(1).getId()).isEqualTo(1L);
+            assertThat(result.getContent().get(0).getOwnerId()).isEqualTo(owner.getId());
+            assertThat(result.getContent().get(0).getOwnerUsername()).isEqualTo(owner.getUsername());
         }
 
         @Test
-        @DisplayName("returns empty list when no available books exist")
+        @DisplayName("returns empty page when no available books exist")
         void returnsEmptyListWhenNoBooksAvailable() {
-            when(bookRepository.findAllByStatusOrderByCreatedAtDesc(ListingStatus.AVAILABLE))
-                    .thenReturn(List.of());
+            when(bookRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(Page.empty());
 
-            assertThat(bookService.getLatestPublicBooks()).isEmpty();
+            assertThat(bookService.getLatestPublicBooks(
+                    Pageable.unpaged(), null, null, null, null).getContent()).isEmpty();
         }
     }
 

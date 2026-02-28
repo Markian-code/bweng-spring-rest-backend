@@ -4,13 +4,19 @@ import at.technikum.springrestbackend.dto.BookCreateRequestDto;
 import at.technikum.springrestbackend.dto.BookResponseDto;
 import at.technikum.springrestbackend.dto.BookUpdateRequestDto;
 import at.technikum.springrestbackend.entity.Book;
+import at.technikum.springrestbackend.entity.BookCondition;
+import at.technikum.springrestbackend.entity.ExchangeType;
 import at.technikum.springrestbackend.entity.ListingStatus;
 import at.technikum.springrestbackend.entity.User;
 import at.technikum.springrestbackend.exception.BadRequestException;
 import at.technikum.springrestbackend.exception.ForbiddenOperationException;
 import at.technikum.springrestbackend.exception.ResourceNotFoundException;
 import at.technikum.springrestbackend.repository.BookRepository;
+import at.technikum.springrestbackend.specification.BookSpecification;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +30,16 @@ public class BookService {
         this.bookRepository = bookRepository;
     }
 
-    public List<BookResponseDto> getLatestPublicBooks() {
-        return bookRepository.findAllByStatusOrderByCreatedAtDesc(ListingStatus.AVAILABLE)
-                .stream()
-                .map(this::toBookResponseDto)
-                .toList();
+    public Page<BookResponseDto> getLatestPublicBooks(
+            final Pageable pageable,
+            final BookCondition condition,
+            final ExchangeType exchangeType,
+            final String language,
+            final String search
+    ) {
+        Specification<Book> spec = BookSpecification.buildPublicFilter(
+                condition, exchangeType, language, search);
+        return bookRepository.findAll(spec, pageable).map(this::toBookResponseDto);
     }
 
     public BookResponseDto getPublicBookById(final Long bookId) {
